@@ -7,7 +7,7 @@ from visualize import smooth
 
 
 def circle_draw(Fdrawing):
-    M = 100
+    M = 256
     timeFactor = 1
     times = np.linspace(0, 1, timeFactor*Fdrawing.size)
 
@@ -27,7 +27,8 @@ def circle_draw(Fdrawing):
     ax.imshow(img, extent=[-1.5, 1.5, -1, 1])
 
 
-    scenario = [5, 10, 10]
+    scenario = [8, 16, 32, 64, 128, 256]
+    # scenario = [4]
 
     m_smoothDrawings = []
     for i in range(len(scenario)):
@@ -46,15 +47,17 @@ def circle_draw(Fdrawing):
         m_partialCircDirs.append(m_partialCircTemp)
 
         m_partialCircPositions = np.zeros(m_partialCircTemp.shape, dtype=np.complex64)
-        m_partialCircPositions[1:, :] = np.cumsum(m_partialCircTemp, axis=0)[:-1, :] # first position must remain zero
+        m_tempSum = np.cumsum(m_partialCircTemp, axis=0)
+        m_partialCircPositions[1:, :] = m_tempSum[:-1, :] # first position must remain zero
+        m_error = m_smoothDrawings[i][0] - m_tempSum[-1, 0]
+        # m_partialCircPoss.append(m_error + m_partialCircPositions)
         m_partialCircPoss.append(m_partialCircPositions)
+        m_smoothDrawings[i][:] -= m_error
 
     
     
     drawingLine, = ax.plot(m_smoothDrawings[0][0].real, m_smoothDrawings[0][0].imag, 'r')
     currentPoint, = ax.plot(m_smoothDrawings[0][0].real, m_smoothDrawings[0][0].imag, 'o', color='black')
-    # drawingLine, = ax.plot([], [], 'r')
-    # currentPoint, = ax.plot([], [], 'o', color='black')
     
     xs = m_partialCircPoss[-1][:, 0].real
     ys = m_partialCircPoss[-1][:, 0].imag
@@ -62,43 +65,43 @@ def circle_draw(Fdrawing):
     vs = m_partialCircDirs[-1][:, 0].imag
 
     quiver = ax.quiver([], [])
-    fresh = True
+    old_m_idx = -1
+    draw_quivers = True
 
-    # ax.plot(0, 0, 'rx')
-    # 
+    text = ax.text(0.0, 0.0, "")
+    
+    speedFactor = 3
     def animation_frame(i):
-        nonlocal fresh
+        nonlocal old_m_idx
+        nonlocal draw_quivers
         nonlocal quiver
 
-        j = timeFactor*i % times.size
-        m_idx = (timeFactor*i//times.size) % len(scenario)
+        j = speedFactor*timeFactor*i % times.size
+        m_idx = (speedFactor*timeFactor*i//times.size) % len(scenario)
         m = scenario[m_idx]
-        print(i, j, m)
+        text = ax.text(1.0, 0.0, str(m))
+        # print(i, j, m)
+
+        if m_idx < old_m_idx:
+            quiver = ax.quiver([], [])
+            draw_quivers = False
 
         m_smoothDrawing = m_smoothDrawings[m_idx]
         # m_smoothDrawing = np.sum(complexCircles, axis=0)
         drawingLine.set_data(m_smoothDrawing[:j].real, m_smoothDrawing[:j].imag)
         currentPoint.set_data(m_smoothDrawing[j].real, m_smoothDrawing[j].imag)
 
-        if m_idx == len(scenario)-1:
+
+        if draw_quivers:
             xs = m_partialCircPoss[m_idx][:, j].real
             ys = m_partialCircPoss[m_idx][:, j].imag
             us = m_partialCircDirs[m_idx][:, j].real
             vs = m_partialCircDirs[m_idx][:, j].imag
             
-            if fresh:
-                quiver = ax.quiver(xs, ys, us, vs, angles='xy', pivot='tail', units='xy', scale=1, scale_units='xy', width=0.01, minlength=0)
-                fresh = False
-            else:
-                quiver.set_UVC(us, vs)
+            quiver = ax.quiver(xs, ys, us, vs, angles='xy', pivot='tail', units='xy', scale=1, scale_units='xy', width=0.01, minlength=0)
 
-                offsets = np.zeros((xs.size, 2), dtype=np.float64)
-                offsets[:, 0] = xs
-                offsets[:, 1] = ys
-                quiver.set_offsets(offsets)
-
-
-        return drawingLine, currentPoint, quiver
+        old_m_idx = m_idx
+        return drawingLine, currentPoint, quiver, text
     
     anim = animation.FuncAnimation(fig, animation_frame, len(scenario)*times.size, interval=20, blit=True)
     plt.show()
@@ -106,4 +109,4 @@ def circle_draw(Fdrawing):
 
 if __name__ == "__main__":
     print("Hello, animate.py")
-    circle_draw(np.loadtxt("output.dat", dtype=np.complex64))
+    circle_draw(np.loadtxt("output3.dat", dtype=np.complex64))

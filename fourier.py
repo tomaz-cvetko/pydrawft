@@ -61,7 +61,7 @@ def fourier(drawing):
 
 if __name__ == "__main__":
     print("Hello, Fourier")
-    N = 256
-    interPoints = interpolate(np.loadtxt("input.dat", dtype=np.complex64), N, f=0.4, correct=3)
+    N = 1024
+    interPoints = interpolate(np.loadtxt("input.dat", dtype=np.complex64), N, f=0.5, correct=5)
 
     fourier(interPoints)
